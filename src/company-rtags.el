@@ -29,8 +29,19 @@
 
 (require 'rtags)
 
+(when noninteractive
+  (eval-when-compile
+    (provide 'company)
+    (provide 'company-template)))
+
 (require 'company)
 (require 'company-template)
+
+(defvar company-async-wait)
+(declare-function company-grab-symbol "ext:company")
+(declare-function company-begin-backend "ext:company" t)
+(declare-function company-in-string-or-comment "ext:company")
+(declare-function company-template-c-like-templatify "ext:company" t)
 
 (defgroup company-rtags nil
   "Company completion back-end for RTags."

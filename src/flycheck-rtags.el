@@ -47,8 +47,18 @@
 
 (require 'rtags)
 
+(when noninteractive
+  (eval-when-compile
+    (provide 'flycheck)
+    (provide 'pcase)))
+
 (require 'flycheck)
 (eval-when-compile (require 'pcase))
+
+(defvar flycheck-checkers)
+(declare-function flycheck-define-generic-checker "ext:flycheck" t)
+(declare-function flycheck-error-new-at "ext:flycheck" t)
+(declare-function flycheck-verification-result-new "ext:flycheck" t)
 
 (defgroup flycheck-rtags nil
   "RTags Flycheck integration."

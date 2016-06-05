@@ -26,11 +26,21 @@
 ;;; Commentary:
 
 ;;; Code:
-
 (require 'rtags)
+
+(when noninteractive
+  (eval-when-compile
+    (provide 'auto-complete)))
 
 (require 'auto-complete)
 (eval-when-compile (require 'cl))
+
+(defvar ac-last-completion)
+(declare-function ac-prefix-symbol "ext:auto-complete")
+(declare-function ac-start "ext:auto-complete")
+(declare-function ac-define-source "ext:auto-complete" t)
+(declare-function auto-complete "ext:auto-complete" t)
+(declare-function yas-expand-snippet "ext:yasnippet")
 
 (defgroup rtags-ac nil
   "Auto completion back-end for RTags."
@@ -137,7 +147,7 @@
 
 (add-hook 'rtags-completions-hook 'rtags-ac-completions-hook)
 
-(ac-define-source rtags
+(defvar ac-source-rtags
   '((init . rtags-ac-init)
     (prefix . rtags-ac-prefix)
     (candidates . rtags-ac-candidates)
@@ -145,6 +155,10 @@
     (document . rtags-ac-document)
     (requires . 0)
     (symbol . "r")))
+
+(defun ac-complete-rtags ()
+  (interactive)
+  (auto-complete '(ac-source-rtags)))
 
 (provide 'rtags-ac)
 
