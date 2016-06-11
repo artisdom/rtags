@@ -21,6 +21,7 @@
 #include <getopt.h>
 #include <typeinfo>
 #include <utility>
+#include <unistd.h>
 
 #include <clang/Basic/Version.h>
 #include <clang-c/Index.h>
@@ -747,6 +748,104 @@ inline Location createLocation(CXSourceLocation loc, int *offsetPtr = 0)
 inline Location createLocation(const CXCursor &cursor, int *offsetPtr = 0)
 {
     return createLocation(clang_getCursorLocation(cursor), offsetPtr);
+}
+
+template <typename T>
+struct Option {
+    const T option;
+    const char *longOpt;
+    const char shortOpt;
+    const int argument;
+    const char *description;
+};
+enum ParseStatus {
+    Parse_Exec,
+    Parse_Ok,
+    Parse_Error
+};
+template <typename T>
+ParseStatus parseArguments(int &argc, char **argv, const std::initializer_list<Option<T> > &opts, const std::function<ParseStatus(T)> &handler)
+{
+    Hash<int, RTags::Option<T> *> shortOptions, longOptions;
+    List<option> options;
+    String shortOptionsString;
+
+    options.reserve(opts.size());
+
+    for (int i=0; opts[i].description; ++i) {
+        if (opts[i].option) {
+            const option opt = { opts[i].longOpt, opts[i].argument, 0, opts[i].shortOpt };
+            if (opts[i].shortOpt) {
+                shortOptionsString.append(opts[i].shortOpt);
+                switch (opts[i].argument) {
+                case no_argument:
+                    break;
+                case required_argument:
+                    shortOptionsString.append(':');
+                    break;
+                case optional_argument:
+                    shortOptionsString.append("::");
+                    break;
+                }
+                assert(!shortOptions.contains(opts[i].shortOpt));
+                shortOptions[opts[i].shortOpt] = &opts[i];
+            }
+            if (opts[i].longOpt)
+                longOptions[options.size()] = &opts[i];
+            options.push_back(opt);
+        }
+    }
+
+    if (getenv("RTAGS_DUMP_UNUSED")) {
+        String unused;
+        for (int i=0; i<26; ++i) {
+            if (!shortOptionsString.contains('a' + i))
+                unused.append('a' + i);
+            if (!shortOptionsString.contains('A' + i))
+                unused.append('A' + i);
+        }
+        printf("Unused: %s\n", unused.constData());
+        for (int i=0; opts[i].description; ++i) {
+            if (opts[i].longOpt) {
+                if (!opts[i].shortOpt) {
+                    printf("No shortoption for %s\n", opts[i].longOpt);
+                } else if (opts[i].longOpt[0] != opts[i].shortOpt) {
+                    printf("Not ideal option for %s|%c\n", opts[i].longOpt, opts[i].shortOpt);
+                }
+            }
+        }
+        return Parse_Ok;
+    }
+
+    {
+        const option opt = { 0, 0, 0, 0 };
+        options.push_back(opt);
+    }
+
+    ParseStatus ret = Parse_Exec;
+    while (ret == Parse_Exec) {
+        int idx = -1;
+        const int c = getopt_long(argc, argv, shortOptionsString.constData(), options.data(), &idx);
+        switch (c) {
+        case -1:
+            return ret;
+        case '?':
+        case ':':
+            return Parse_Error;
+        default:
+            break;
+        }
+
+        const RTags::Option<T> *opt = (idx == -1 ? shortOptions.value(c) : longOptions.value(idx));
+        assert(opt->option);
+        ret = handler(opt);
+    }
+    if (optind < argc) {
+        fprintf(stderr, "unexpected option -- '%s'\n", argv[optind]);
+        return Parse_Error;
+    }
+
+    return ret;
 }
 }
 
