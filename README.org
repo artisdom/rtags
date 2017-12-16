@@ -452,7 +452,7 @@ current project on demand.
 RTags keeps a cache of indexed data so you don't have to reindex everything if
 you restart it.
 
-The location of this data is by default =~/.rtags= but can be overridden by
+The location of this data is by default =~/.cache/rtags= but can be overridden by
 passing =--data-dir /other/dir= to =rdm= or putting something like this in
 your ~/.rdmrc:
 
